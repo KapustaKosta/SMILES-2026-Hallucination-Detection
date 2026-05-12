@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 
 def split_data(
@@ -53,18 +53,26 @@ def split_data(
 
     idx = np.arange(len(y))
 
-    idx_train_val, idx_test = train_test_split(
-        idx,
-        test_size=test_size,
+    n_splits = 5
+    skf = StratifiedKFold(
+        n_splits=n_splits,
+        shuffle=True,
         random_state=random_state,
-        stratify=y,
     )
-    relative_val = val_size / (1.0 - test_size)
-    idx_train, idx_val = train_test_split(
-        idx_train_val,
-        test_size=relative_val,
-        random_state=random_state,
-        stratify=y[idx_train_val],
-    )
-    return [(idx_train, idx_val, idx_test)]
+
+    splits = []
+
+    for idx_train_val, idx_test in skf.split(idx, y):
+        relative_val_size = val_size / (len(idx_train_val) / len(y))
+
+        idx_train, idx_val = train_test_split(
+            idx_train_val,
+            test_size=relative_val_size,
+            random_state=random_state,
+            stratify=y[idx_train_val],
+        )
+
+        splits.append((idx_train, idx_val, idx_test))
+
+    return splits
 
